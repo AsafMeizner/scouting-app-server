@@ -1,25 +1,27 @@
-// middleware.ts - Place this in a utils folder or similar
+// utils/middleware.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { authenticate, User, UserRole } from './users';
+import { authenticate, hasPermission, User } from './users';
 
 export function withAuth(
   handler: (req: NextApiRequest, res: NextApiResponse, user: User) => Promise<void>,
-  requiredRole: UserRole | null = null
+  collection: string,
+  requiredAction: 'read' | 'write'
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
-    const { username, password } = req.headers;
+    const { authorization } = req.headers;
 
-    if (!username || !password) {
+    if (!authorization) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const user = authenticate(username as string, password as string);
+    const token = authorization.split(' ')[1];
+    const user = await authenticate(token, '');
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {
+    if (!hasPermission(user, collection, requiredAction)) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }
 

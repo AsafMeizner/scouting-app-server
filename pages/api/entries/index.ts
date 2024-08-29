@@ -16,40 +16,35 @@ type ResponseData = {
 };
 
 async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>, user: User) {
-    if (req.method === 'GET') {
-      try {
-        await client.connect();
-        const db = client.db(dbName);
-        const entries = await db.collection('entries').find().toArray();
-        res.status(200).json({ message: 'Entries fetched successfully', entries });
-      } catch (error) {
-        res.status(500).json({ message: 'Error fetching entries' });
-      } finally {
-        await client.close();
-      }
-    } else if (req.method === 'POST') {
-      // Check if the user has sufficient permissions
-      if (user.role === 'scouter') {
-        return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
-      }
-  
-      try {
-        await client.connect();
-        const db = client.db(dbName);
-        const { data } = req.body;
-        const result = await db.collection('entries').insertOne({
-          timestamp: new Date(),
-          data,
-        });
-        res.status(201).json({ message: 'Entry created', entryId: result.insertedId.toString() });
-      } catch (error) {
-        res.status(500).json({ message: 'Error creating entry' });
-      } finally {
-        await client.close();
-      }
-    } else {
-      res.status(405).json({ message: 'Method Not Allowed' });
+  if (req.method === 'GET') {
+    try {
+      await client.connect();
+      const db = client.db(dbName);
+      const entries = await db.collection('entries').find().toArray();
+      res.status(200).json({ message: 'Entries fetched successfully', entries });
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching entries' });
+    } finally {
+      await client.close();
     }
+  } else if (req.method === 'POST') {
+    try {
+      await client.connect();
+      const db = client.db(dbName);
+      const { data } = req.body;
+      const result = await db.collection('entries').insertOne({
+        timestamp: new Date(),
+        data,
+      });
+      res.status(201).json({ message: 'Entry created', entryId: result.insertedId.toString() });
+    } catch (error) {
+      res.status(500).json({ message: 'Error creating entry' });
+    } finally {
+      await client.close();
+    }
+  } else {
+    res.status(405).json({ message: 'Method Not Allowed' });
+  }
 }
 
-export default withAuth(handler, 'scouter');
+export default withAuth(handler, 'entries', 'read'); // Adjust 'read' to 'write' for POST

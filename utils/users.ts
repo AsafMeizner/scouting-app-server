@@ -1,20 +1,95 @@
-// users.ts - You can place this in a utils folder or similar
+import { MongoClient, ObjectId } from 'mongodb';
 
-export type UserRole = 'scouter' | 'head-scouter' | 'admin';
+const url = process.env.DATABASE_URL || 'your-mongodb-url';
+const client = new MongoClient(url);
+const dbName = 'test';
+const collectionName = 'users';
 
-export interface User {
-  username: string;
-  password: string; // For simplicity, store plaintext passwords (not recommended for production)
-  role: UserRole;
+export interface Permission {
+  name: string;
+  read: boolean;
+  write: boolean;
 }
 
-export const users: User[] = [
-  { username: 'scouter', password: 'password1', role: 'scouter' },
-  { username: 'head-scouter', password: 'password2', role: 'head-scouter' },
-  { username: 'admin', password: 'adminpass', role: 'admin' }
-];
+export interface User {
+  _id?: ObjectId;
+  username: string;
+  password: string;
+  role: string;
+  permissions: Permission[];
+}
 
-export function authenticate(username: string, password: string): User | null {
-  const user = users.find(u => u.username === username && u.password === password);
-  return user || null;
+// Default admin user (only used for initialization)
+const defaultAdmin: User = {
+  username: 'admin',
+  password: 'adminpass',
+  role: 'admin',
+  permissions: [
+    { name: 'entries', read: true, write: true },
+    { name: 'schemas', read: true, write: true },
+    { name: 'users', read: true, write: true },
+  ],
+};
+
+// Initialize the user collection with a default admin user if it doesn't exist
+export async function initializeUserCollection() {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const userCollection = db.collection<User>(collectionName);
+
+    // Check if the collection is empty (no users)
+    const adminExists = await userCollection.findOne({ username: 'admin' });
+
+    if (!adminExists) {
+      await userCollection.insertOne(defaultAdmin);
+      console.log('Admin user created.');
+    } else {
+      console.log('Admin user already exists.');
+    }
+  } catch (error) {
+    console.error('Error initializing user collection:', error);
+  } finally {
+    await client.close();
+  }
+}
+
+// Authenticate user by checking username and password
+export async function authenticate(username: string, password: string): Promise<User | null> {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const userCollection = db.collection<User>(collectionName);
+
+    const user = await userCollection.findOne({ username, password });
+    return user || null;
+  } catch (error) {
+    console.error('Error during authentication:', error);
+    return null;
+  } finally {
+    await client.close();
+  }
+}
+
+// Add a new user
+export async function addUser(newUser: User): Promise<ObjectId | null> {
+  try {
+    await client.connect();
+    const db = client.db(dbName);
+    const userCollection = db.collection<User>(collectionName);
+
+    const result = await userCollection.insertOne(newUser);
+    return result.insertedId;
+  } catch (error) {
+    console.error('Error adding new user:', error);
+    return null;
+  } finally {
+    await client.close();
+  }
+}
+
+// Check if a user has a specific permission for a given collection
+export function hasPermission(user: User, collection: string, action: 'read' | 'write'): boolean {
+  const permission = user.permissions.find(c => c.name === collection);
+  return permission ? permission[action] : false;
 }

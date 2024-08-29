@@ -7,7 +7,7 @@ import { User } from '../../../utils/users';
 
 const url = process.env.DATABASE_URL || 'your-mongodb-url';
 const client = new MongoClient(url);
-const dbName = 'your-database-name';
+const dbName = 'test';
 
 type ResponseData = {
   message: string;
@@ -33,7 +33,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>, 
       await client.close();
     }
   } else if (req.method === 'PUT') {
-    if (user.role !== 'admin') {
+    // Ensure the user has 'write' permission for the 'schemas' collection
+    if (!user.permissions.collections.some(c => c.name === 'schemas' && c.write)) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }
 
@@ -56,7 +57,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>, 
       await client.close();
     }
   } else if (req.method === 'DELETE') {
-    if (user.role !== 'admin') {
+    // Ensure the user has 'write' permission for the 'schemas' collection
+    if (!user.permissions.collections.some(c => c.name === 'schemas' && c.write)) {
       return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
     }
 
@@ -79,4 +81,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>, 
   }
 }
 
-export default withAuth(handler, 'scouter');
+export default withAuth(handler, 'schemas', 'read'); // Ensure 'read' permission for GET, 'write' for PUT/DELETE

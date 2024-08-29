@@ -15,7 +15,6 @@ export interface User {
   _id?: ObjectId;
   username: string;
   password: string;
-  role: string;
   permissions: Permission[];
 }
 
@@ -23,7 +22,6 @@ export interface User {
 const defaultAdmin: User = {
   username: 'admin',
   password: 'adminpass',
-  role: 'admin',
   permissions: [
     { name: 'entries', read: true, write: true },
     { name: 'schemas', read: true, write: true },

@@ -15,7 +15,6 @@ interface User {
   _id?: string;
   username: string;
   password: string;
-  role: string;
   permissions: Permission[];
 }
 
@@ -23,24 +22,21 @@ interface User {
 export default function Page() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState({ username: '', password: '', roleName: '', permissions: [] as Permission[] });
+  const [newUser, setNewUser] = useState({
+    username: '',
+    password: '',
+    permissions: [
+      { name: 'entries', read: false, write: false },
+      { name: 'schemas', read: false, write: false },
+      { name: 'users', read: false, write: false },
+    ],
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
-    // Make a request to initialize the user collection
-    const initialize = async () => {
-      try {
-        await axios.get('/api/initialize');
-      } catch (err) {
-        console.error('Error initializing user collection:', err);
-      }
-    };
-
-    initialize();
-
     if (isAuthenticated) {
       fetchUsers();
     }
@@ -50,7 +46,6 @@ export default function Page() {
     try {
       const response = await axios.get('/api/users');
       setUsers(response.data);
-      setNewUser({ ...newUser, permissions: response.data[0]?.permissions.map((perm: Permission) => ({ ...perm, read: false, write: false })) || [] });
     } catch (err) {
       console.error('Error fetching users:', err);
     }
@@ -81,22 +76,19 @@ export default function Page() {
 
   const handleAddUser = async () => {
     try {
-      const token = localStorage.getItem('token'); // Example of retrieving a token
-  
       await axios.post('/api/users', {
         username: newUser.username,
         password: newUser.password,
-        roleName: newUser.roleName,
         permissions: newUser.permissions,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`, // or other appropriate header for your setup
-        },
       });
-      setNewUser({ username: '', password: '', roleName: '', permissions: newUser.permissions.map(perm => ({ ...perm, read: false, write: false })) });
+      setNewUser({
+        username: '',
+        password: '',
+        permissions: newUser.permissions.map((perm) => ({ ...perm, read: false, write: false })),
+      });
       fetchUsers();
     } catch (err) {
-      console.error(err);
+      console.error('Error adding user:', err);
     }
   };
 
@@ -105,7 +97,7 @@ export default function Page() {
       await axios.delete(`/api/users/${userId}`);
       fetchUsers();
     } catch (err) {
-      console.error(err);
+      console.error('Error deleting user:', err);
     }
   };
 
@@ -128,7 +120,9 @@ export default function Page() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button style={styles.button} onClick={handleLogin}>Login</button>
+          <button style={styles.button} onClick={handleLogin}>
+            Login
+          </button>
           {error && <p style={styles.error}>{error}</p>}
         </div>
       ) : (
@@ -138,8 +132,10 @@ export default function Page() {
           <ul style={styles.userList}>
             {users.map((user) => (
               <li key={user._id} style={styles.userItem}>
-                {user.username} - Role: {user.role}
-                <button style={styles.deleteButton} onClick={() => handleDeleteUser(user._id!)}>Delete</button>
+                {user.username}
+                <button style={styles.deleteButton} onClick={() => handleDeleteUser(user._id!)}>
+                  Delete
+                </button>
               </li>
             ))}
           </ul>
@@ -157,13 +153,6 @@ export default function Page() {
             placeholder="Password"
             value={newUser.password}
             onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-          />
-          <input
-            style={styles.input}
-            type="text"
-            placeholder="Role Name"
-            value={newUser.roleName}
-            onChange={(e) => setNewUser({ ...newUser, roleName: e.target.value })}
           />
           <div style={styles.permissionsContainer}>
             <h3>Set Permissions</h3>
@@ -189,7 +178,9 @@ export default function Page() {
               </div>
             ))}
           </div>
-          <button style={styles.button} onClick={handleAddUser}>Add User</button>
+          <button style={styles.button} onClick={handleAddUser}>
+            Add User
+          </button>
         </div>
       )}
     </div>
@@ -205,7 +196,7 @@ const styles = {
     height: '100vh',
     padding: '20px',
     backgroundColor: '#f4f4f4',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   loginContainer: {
     width: '300px',
@@ -213,7 +204,7 @@ const styles = {
     backgroundColor: '#ffffff',
     borderRadius: '8px',
     boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   dashboardContainer: {
     width: '600px',
@@ -221,18 +212,18 @@ const styles = {
     backgroundColor: '#ffffff',
     borderRadius: '8px',
     boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   heading: {
     fontSize: '24px',
     marginBottom: '20px',
     textAlign: 'center' as 'center',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   subHeading: {
     fontSize: '20px',
     marginBottom: '10px',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   input: {
     width: '100%',
@@ -240,7 +231,7 @@ const styles = {
     marginBottom: '10px',
     borderRadius: '4px',
     border: '1px solid #ccc',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   button: {
     width: '100%',
@@ -258,14 +249,14 @@ const styles = {
   userList: {
     listStyleType: 'none' as 'none',
     padding: 0,
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   userItem: {
     display: 'flex',
     justifyContent: 'space-between',
     padding: '10px',
     borderBottom: '1px solid #ccc',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   deleteButton: {
     padding: '5px 10px',
@@ -277,10 +268,10 @@ const styles = {
   },
   permissionsContainer: {
     marginBottom: '20px',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
   permissionItem: {
     marginBottom: '10px',
-    color: '#000', // Text color set to black
+    color: '#000',
   },
 };

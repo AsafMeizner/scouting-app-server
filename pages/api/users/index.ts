@@ -21,9 +21,9 @@ export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
       await client.close();
     }
   } else if (req.method === 'POST') {
-    const { username, password, roleName, permissions } = req.body;
+    const { username, password, permissions } = req.body;
 
-    if (!username || !password || !roleName || !permissions) {
+    if (!username || !password || !permissions) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -33,7 +33,6 @@ export default withAuth(async (req: NextApiRequest, res: NextApiResponse) => {
       const newUser: User = {
         username,
         password,
-        role: roleName,
         permissions: permissions,
       };
 
